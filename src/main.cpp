@@ -90,6 +90,8 @@ void handleControlCommand(const char* command);
 void checkAutoSleep();
 void wakeFromSleep();
 void refreshModuleStatuses();
+void processSerialInput();
+void printSerialHelp();
 
 // ○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○
 // ○○○○○○○○○○ setup()
@@ -215,26 +217,24 @@ void setup() {
     // until then, resolveCommand() reports "no vehicle selected" instead
     // of sending anything.
 
-    // 8. TFT + LVGL. Learn Mode modules must be attached before begin() -
-    // otherwise the Learn tab's internal pointers stay null.
-    tftUI.attachLearnModules(&learnEngine, &customVehicleStore,
-                              activeProfileManager, vehicleControl);
-    moduleStatusManager.setState(MODULE_DISPLAY, MODULE_INITIALIZING);
-    tftUI.begin();
-    moduleStatusManager.setState(MODULE_DISPLAY, MODULE_READY);
-    tftUI.setControlCallback(handleCommand);
-    // Update the visual CAN state only after the TFT/LVGL objects exist.
-    // The driver being initialized does not prove that a transceiver is
-    // physically wired to a live bus; the status indicator is therefore
-    // deliberately based on the controller's current state here and is
-    // refined by runtime diagnostics in the UI.
-    tftUI.setCANStatus(canManager.isActive());
-    moduleStatusManager.setState(MODULE_TOUCH,
-        tftUI.isTouchAvailable() ? MODULE_READY : MODULE_NOT_PRESENT);
-    if (!canManager.isActive()) {
-        tftUI.showNotification("CAN Bus error!");
+    // 8. Display/UI is optional; remote services and vehicle processing do
+    // not depend on its initialization.
+    if (getConfig()->displayEnabled) {
+        tftUI.attachLearnModules(&learnEngine, &customVehicleStore,
+                                  activeProfileManager, vehicleControl);
+        moduleStatusManager.setState(MODULE_DISPLAY, MODULE_INITIALIZING);
+        tftUI.begin();
+        moduleStatusManager.setState(MODULE_DISPLAY,
+            tftUI.isInitialized() ? MODULE_READY : MODULE_ERROR);
+        tftUI.setControlCallback(handleCommand);
+        tftUI.setCANStatus(canManager.isActive());
+        moduleStatusManager.setState(MODULE_TOUCH,
+            tftUI.isTouchAvailable() ? MODULE_READY : MODULE_NOT_PRESENT);
+        tftUI.showNotification(canManager.isActive() ? "CarTouch ready" : "CAN Bus error!");
     } else {
-        tftUI.showNotification("CarTouch ready");
+        moduleStatusManager.setState(MODULE_DISPLAY, MODULE_DISABLED);
+        moduleStatusManager.setState(MODULE_TOUCH, MODULE_DISABLED);
+        Serial.println("[DISPLAY] Disabled by persisted hardware configuration");
     }
 
     // 9. WiFi (AP mode by default)
@@ -288,7 +288,64 @@ void setup() {
 // □□□□□□□□□□ loop()
 // ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 
+void printSerialHelp() {
+    Serial.println("CarTouch serial commands:");
+    Serial.println("  help                Show this help");
+    Serial.println("  status              Show device status summary");
+    Serial.println("  display on|off      Enable or disable the TFT/UI");
+    Serial.println("  factoryreset        Restore default settings");
+    Serial.println("  lock|unlock         Door control commands");
+    Serial.println("  listen_only         Toggle listen-only mode");
+    Serial.println("  vehicle_select      Trigger vehicle selection menu");
+}
+
+void processSerialInput() {
+    static String serialLine;
+    while (Serial.available()) {
+        char ch = Serial.read();
+        if (ch == '\r' || ch == '\n') {
+            if (serialLine.length() > 0) {
+                String cmd = serialLine;
+                serialLine = "";
+                cmd.trim();
+                if (cmd.equalsIgnoreCase("help")) {
+                    printSerialHelp();
+                } else if (cmd.equalsIgnoreCase("status")) {
+                    Serial.printf("firmware=%s\n", CAR_TOUCH_FIRMWARE_VERSION);
+                    Serial.printf("displayEnabled=%s\n", getConfig()->displayEnabled ? "true" : "false");
+                    Serial.printf("listenOnly=%s\n", getConfig()->listenOnlyMode ? "true" : "false");
+                    Serial.printf("wifi=%s\n", wifiManager.isConnected() ? "connected" : "offline");
+                    Serial.printf("can0=%s\n", canManager.isActive() ? "active" : "failed");
+                } else if (cmd.startsWith("display ")) {
+                    String mode = cmd.substring(8);
+                    mode.trim();
+                    if (mode.equalsIgnoreCase("on")) {
+                        getConfig()->displayEnabled = true;
+                        saveConfig();
+                        Serial.println("display enabled");
+                    } else if (mode.equalsIgnoreCase("off")) {
+                        getConfig()->displayEnabled = false;
+                        saveConfig();
+                        Serial.println("display disabled");
+                    } else {
+                        Serial.println("usage: display on|off");
+                    }
+                } else if (cmd.equalsIgnoreCase("factoryreset")) {
+                    setDefaultConfig();
+                    Serial.println("factory defaults restored");
+                } else {
+                    handleCommand(cmd.c_str());
+                }
+            }
+        } else if (ch >= 32) {
+            serialLine += ch;
+        }
+    }
+}
+
 void loop() {
+    processSerialInput();
+
     // Feed the watchdog every iteration.
     esp_task_wdt_reset();
 
@@ -370,7 +427,7 @@ void loop() {
     // Wi-Fi off) 10 minutes after the last *command* even while the user was
     // actively using the TFT. lv_disp_get_inactive_time() is LVGL's time
     // since the last pointer/touch event.
-    if (lv_disp_get_inactive_time(NULL) < 1000) {
+    if (tftUI.isInitialized() && lv_disp_get_inactive_time(NULL) < 1000) {
         if (currentMode == MODE_SLEEP) {
             wakeFromSleep();
         }

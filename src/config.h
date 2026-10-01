@@ -19,28 +19,50 @@
 // □□□□□□□□□□ Hardware pins
 // ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 
-// CAN0 - ESP32-S3 TWAI with an external 3.3V-compatible transceiver.
-#define PIN_CAN_TX 9    // GPIO9  - CAN Transmit
-#define PIN_CAN_RX 6    // GPIO6  - CAN Receive (moved from GPIO10 to avoid conflict with TFT_CS)
+// Hardware profile defaults.
+// Keep the build consistent across ESP32-S3 and ESP32-C6 while allowing
+// runtime reassignment through persisted configuration. The defaults remain
+// a safe starting point; runtime validation must still reject conflicts.
+#if defined(CONFIG_IDF_TARGET_ESP32C6)
+    // ESP32-C6 default pin set: use quiet GPIOs that are not dedicated flash
+    // or strapping pins and leave the USB/UART pins available for debugging.
+    #define PIN_CAN_TX 20
+    #define PIN_CAN_RX 21
+    #define PIN_CAN1_CS  8
+    #define PIN_CAN1_INT 9
+    #define CAN1_SPEED 500000
+    #define CAN1_LISTEN_ONLY true
+    #define MCP2515_SPI_CLOCK 10000000
 
-#define PIN_CAN1_CS  15    // MCP2515 CS; SPI lines are shared with TFT/Touch
-#define PIN_CAN1_INT 16    // MCP2515 active-low interrupt
-#define CAN1_SPEED 500000
-#define CAN1_LISTEN_ONLY true
-#define MCP2515_SPI_CLOCK 10000000
+    #define PIN_TFT_CS   6
+    #define PIN_TFT_DC   7
+    #define PIN_TFT_RST  5
+    #define PIN_TFT_MOSI 3
+    #define PIN_TFT_SCLK 4
+    #define PIN_TFT_MISO 2
+    #define PIN_TFT_BL   11
+    #define PIN_TOUCH_CS 12
+    #define PIN_LED_INTERNAL 13
+#else
+    // ESP32-S3 default pin set for the original CarTouch board.
+    #define PIN_CAN_TX 9
+    #define PIN_CAN_RX 6
+    #define PIN_CAN1_CS  15
+    #define PIN_CAN1_INT 16
+    #define CAN1_SPEED 500000
+    #define CAN1_LISTEN_ONLY true
+    #define MCP2515_SPI_CLOCK 10000000
 
-// TFT display - ILI9341, 2.8" SPI, 240x320, with XPT2046 touch
-#define PIN_TFT_CS   10    // GPIO10 - Chip Select
-#define PIN_TFT_DC   7     // GPIO7  - Data/Command
-#define PIN_TFT_RST  4     // GPIO4  - Reset
-#define PIN_TFT_MOSI 11    // GPIO11 - Master Out Slave In
-#define PIN_TFT_SCLK 12    // GPIO12 - Serial Clock
-#define PIN_TFT_MISO 13    // GPIO13 - Master In Slave Out
-#define PIN_TFT_BL   21    // GPIO21 - Backlight
-
-#define PIN_TOUCH_CS          14    // GPIO14 - Touch Chip Select
-
-#define PIN_LED_INTERNAL      38    // GPIO38 - ESP32-S3 DevKit onboard LED
+    #define PIN_TFT_CS   10
+    #define PIN_TFT_DC   7
+    #define PIN_TFT_RST  4
+    #define PIN_TFT_MOSI 11
+    #define PIN_TFT_SCLK 12
+    #define PIN_TFT_MISO 13
+    #define PIN_TFT_BL   21
+    #define PIN_TOUCH_CS 14
+    #define PIN_LED_INTERNAL 38
+#endif
 
 // ○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○
 // ○○○○○○○○○○ CAN Bus settings
@@ -245,6 +267,10 @@ struct AppConfig {
     uint8_t  can1IntPin      = PIN_CAN1_INT;
     uint32_t can1Speed       = CAN1_SPEED;
     bool     can1ListenOnly  = CAN1_LISTEN_ONLY;
+
+    // A display is optional. TFT_eSPI cannot reliably detect a disconnected
+    // panel, so headless installations can disable its driver explicitly.
+    bool     displayEnabled  = true;
 };
 
 // ○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○

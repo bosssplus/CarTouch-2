@@ -4,6 +4,8 @@
 #include <Update.h>
 #include "config.h"
 
+extern void handleCommand(const char* command);
+
 namespace {
 static const char* BLE_SERVICE_UUID  = "6E400001-B5A3-F393-E0A9-E50E24DCCA9E";
 static const char* BLE_STATUS_UUID   = "6E400003-B5A3-F393-E0A9-E50E24DCCA9E";
@@ -128,9 +130,21 @@ void BLEManager::_handleCommand(const String& command) {
     String cmd = command;
     cmd.trim();
 
-    if (cmd.equalsIgnoreCase("STATUS")) {
+    if (cmd.equalsIgnoreCase("STATUS") || cmd.equalsIgnoreCase("STATE")) {
         String status = "READY:" + String(_otaInProgress ? "OTA" : "IDLE");
         _sendStatus(status.c_str());
+        return;
+    }
+
+    if (cmd.startsWith("CMD:")) {
+        String command = cmd.substring(4);
+        command.trim();
+        if (command.length() > 0) {
+            handleCommand(command.c_str());
+            _sendStatus("COMMAND_ACCEPTED");
+        } else {
+            _sendStatus("COMMAND_EMPTY");
+        }
         return;
     }
 

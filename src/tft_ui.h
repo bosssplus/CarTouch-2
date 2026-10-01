@@ -52,6 +52,8 @@ public:
     /** Initializes the display and LVGL. */
     void begin();
 
+    bool isInitialized() const { return _initialized; }
+
     /** Call every loop() iteration. */
     void update();
 

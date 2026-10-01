@@ -1678,6 +1678,8 @@ void TFT_UI::setWiFiStatus(bool connected) {
 // ○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○
 
 void TFT_UI::setTheme(ThemeMode mode) {
+    if (!_initialized) return;
+
     lv_color_t bgColor;
     lv_color_t fgColor;
 

@@ -115,6 +115,7 @@ static void applyDefaultConfigValues() {
     currentConfig.can1IntPin = PIN_CAN1_INT;
     currentConfig.can1Speed = CAN1_SPEED;
     currentConfig.can1ListenOnly = CAN1_LISTEN_ONLY;
+    currentConfig.displayEnabled = true;
     currentConfig.sleepTimeout = AUTO_SLEEP_TIMEOUT;
     currentConfig.touchCalibrated = false;
     memset(currentConfig.touchCalData, 0, sizeof(currentConfig.touchCalData));
@@ -144,22 +145,27 @@ bool loadConfig() {
     }
 
     const size_t legacyConfigSize = offsetof(AppConfig, can1CsPin);
+    const size_t preDisplayConfigSize = offsetof(AppConfig, displayEnabled);
     size_t configSize = sizeof(AppConfig);
     memset(&currentConfig, 0, sizeof(currentConfig));
     err = nvs_get_blob(nvsHandle, "config", &currentConfig, &configSize);
     nvs_close(nvsHandle);
 
     const bool legacyConfig = err == ESP_OK && configSize == legacyConfigSize;
+    const bool preDisplayConfig = err == ESP_OK && configSize == preDisplayConfigSize;
     if (legacyConfig) {
         currentConfig.can1CsPin = PIN_CAN1_CS;
         currentConfig.can1IntPin = PIN_CAN1_INT;
         currentConfig.can1Speed = CAN1_SPEED;
         currentConfig.can1ListenOnly = CAN1_LISTEN_ONLY;
     }
+    if (legacyConfig || preDisplayConfig) {
+        currentConfig.displayEnabled = true;
+    }
 
     const bool validStoredConfig =
         err == ESP_OK &&
-        (configSize == sizeof(AppConfig) || legacyConfig) &&
+        (configSize == sizeof(AppConfig) || legacyConfig || preDisplayConfig) &&
         currentConfig.configMagic == 0xCAFE1234 &&
         validateCanPinAssignment(currentConfig.canTxPin, currentConfig.canRxPin,
                                  currentConfig.can1CsPin, currentConfig.can1IntPin) &&
