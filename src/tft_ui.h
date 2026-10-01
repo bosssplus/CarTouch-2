@@ -239,8 +239,8 @@ private:
 
     // -- LVGL display driver -------------------------------------------------------
     static lv_disp_draw_buf_t _dispBuf;
-    static lv_color_t          _buf1[LVGL_BUF_SIZE];
-    static lv_color_t          _buf2[LVGL_BUF_SIZE];
+    static lv_color_t*         _buf1;
+    static lv_color_t*         _buf2;
 
     static void _lvglDisplayFlush(lv_disp_drv_t* drv, const lv_area_t* area, lv_color_t* colorMap);
     static void _lvglTouchRead(lv_indev_drv_t* drv, lv_indev_data_t* data);

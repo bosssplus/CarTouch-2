@@ -286,10 +286,8 @@ CAN1 از کریستال 8 MHz روی MCP2515 و SPI مشترک با TFT/Touch �
 **پیش‌نیازها:** Git + [VS Code](https://code.visualstudio.com/) + افزونه‌ی PlatformIO
 
 ```bash
-pio run -e esp32-s3-devkitc-1                 # ساخت firmware S3 با PSRAM و 16MB
-pio run -e esp32-s3-devkitc-1-4mb            # ساخت firmware S3 بدون PSRAM و با پارتیشن 4MB
-pio run -e esp32-c6-devkitc-1                 # ساخت firmware C6 با BLE و بدون PSRAM
-pio run -e esp32-c6-devkitm-1                 # ساخت firmware C6 4MB (headless/limited storage)
+pio run -e esp32-s3-devkitc-1                 # ساخت firmware برای S3 N16R8، فلش 16MB و PSRAM
+pio run -e esp32-s3-devkitc-1-4mb            # ساخت محدود برای S3 N4؛ filesystem کامل پشتیبانی نمی‌شود
 pio run -e esp32-s3-devkitc-1 -t buildfs      # ساخت filesystem
 pio run -e esp32-s3-devkitc-1 -t upload       # آپلود firmware
 pio run -e esp32-s3-devkitc-1 -t uploadfs     # آپلود filesystem (وب و DBC)
@@ -309,12 +307,12 @@ pio test -e native
 <details>
 <summary><b>فلش دستی با esptool (پارتیشن‌های 4MB و 16MB)</b></summary>
 
-پروژه دو جدول پارتیشن اصلی را در اختیار دارد:
+پروژه دو جدول پارتیشن دارد:
 
-- <code>cartouch_16MB.csv</code> برای ماژول‌های ESP32-S3 با فلش 16MB و PSRAM
-- <code>partitions_4MB.csv</code> برای ماژول‌های 4MB، بدون PSRAM، یا C6/limited-storage buildها
+- <code>cartouch_16MB.csv</code> برای ESP32-S3 N16R8 با فلش 16MB و PSRAM
+- <code>partitions_4MB.csv</code> فقط برای S3 N4 با فلش 4MB و بدون PSRAM
 
-برای ماژول‌های 4MB، حافظه‌ی SPIFFS محدود است و مجموعه کامل DBCهای وب‌سایت و فایل‌های فلش‌ شده ممکن است در همان پارتیشن جا نشود. در این حالت، نسخه‌ی پایدار عبارت است از ساختار headless/limited-storage با فایل‌های ضروری و ذخیره‌سازی انعطاف‌پذیر از طریق OTA یا فایل‌های بارگذاری‌شده.
+جدول 4MB دو slot برنامه‌ی 1.625MiB و SPIFFS با ظرفیت 640KiB دارد. پوشه‌ی کامل <code>data/</code> حدود 3.6MiB است؛ بنابراین build محدود 4MB، بسته‌ی کامل DBC و وب را در SPIFFS جا نمی‌دهد و برای اجرای کامل CarTouch پشتیبانی‌شده نیست. برای قابلیت‌های کامل، N16R8 با پارتیشن 16MB را استفاده کنید.
 
 <table dir="rtl">
 <tr>
@@ -332,7 +330,7 @@ pio test -e native
 
 <div class="markdown-alert markdown-alert-note" dir="rtl">
 <p class="markdown-alert-title">Note</p>
-<p>‏برای ماژول‌های بدون PSRAM، ساخت برنامه باید با پارتیشن 4MB و خروجی حافظه‌ی محدود انجام شود. ماژول‌های 16MB/PSRAM S3 می‌توانند نسخه کامل‌تر و حجیم‌تر را اجرا کنند؛ در برابر آن، C6 و 4MB buildها باید از سطح ذخیره‌سازی و DBCها به‌صورت محدودتر استفاده کنند.</p>
+<p>‏پروفایل کامل و آزموده‌شده برای S3 N16R8 است. پروفایل N4 صرفاً امکان ارزیابی build محدود firmware را می‌دهد و به‌دلیل نبود فضای SPIFFS کافی، پشتیبانی از مجموعه کامل DBC و رابط وب در آن تضمین نمی‌شود.</p>
 </div>
 
 **بیلد خودکار:** workflow در `.github/workflows/CarTouch-build.yml` شامل build فریمویر و filesystem، static analysis، تست‌های native، بررسی اندازه‌ی SPIFFS و آپلود artifact است.
