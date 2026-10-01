@@ -17,6 +17,7 @@
 #include "vehicle_control.h"
 #include "ct_battery.h"
 #include <TFT_eSPI.h>
+#include <esp_heap_caps.h>
 #include <esp_task_wdt.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
@@ -44,8 +45,8 @@ static TFT_eSPI* pTft = &tft;
 static TFT_UI* pThisUI = nullptr;
 
 lv_disp_draw_buf_t TFT_UI::_dispBuf;
-lv_color_t          TFT_UI::_buf1[LVGL_BUF_SIZE];
-lv_color_t          TFT_UI::_buf2[LVGL_BUF_SIZE];
+lv_color_t*         TFT_UI::_buf1 = nullptr;
+lv_color_t*         TFT_UI::_buf2 = nullptr;
 
 // ○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○
 // ○○○○○○○○○○ Touch input
@@ -205,24 +206,28 @@ void TFT_UI::begin() {
     pinMode(PIN_TFT_BL, OUTPUT);
     analogWrite(PIN_TFT_BL, TFT_BRIGHTNESS_DAY);
 
-    // If a valid calibration is already stored in NVS, hand it to
-    // TFT_eSPI so getTouch() returns correct pixel coordinates from now
-    // on. Otherwise (first boot, or the user requested recalibration
-    // from Settings), run the interactive wizard. This runs once,
-    // before the main UI is built, and blocks - the only place in this
-    // file where blocking is acceptable, since UI buttons themselves
-    // can't be touched accurately without a valid calibration.
+    // Touch is optional. Never block boot waiting for an unconfigured or
+    // disconnected controller; calibration is an explicit Settings action.
     AppConfig* cfg = getConfig();
     if (cfg->touchCalibrated) {
         tft.setTouch(cfg->touchCalData);
         _touchAvailable = true;
         Serial.println("[TFT] Applied stored touch calibration");
     } else {
-        Serial.println("[TFT] No touch calibration found - running first-boot wizard...");
-        _touchAvailable = runTouchCalibration();
+        _touchAvailable = false;
+        Serial.println("[TFT] Touch unavailable until explicitly calibrated from Settings");
     }
 
     lv_init();
+
+    const size_t bufferBytes = sizeof(lv_color_t) * LVGL_BUF_SIZE;
+    _buf1 = static_cast<lv_color_t*>(heap_caps_malloc(bufferBytes, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT));
+    if (!_buf1) _buf1 = static_cast<lv_color_t*>(heap_caps_malloc(bufferBytes, MALLOC_CAP_8BIT));
+    if (!_buf1) {
+        Serial.println("[TFT] Unable to allocate LVGL draw buffer; display disabled");
+        return;
+    }
+    _buf2 = static_cast<lv_color_t*>(heap_caps_malloc(bufferBytes, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT));
 
     lv_disp_draw_buf_init(&_dispBuf, _buf1, _buf2, LVGL_BUF_SIZE);
 
@@ -234,11 +239,13 @@ void TFT_UI::begin() {
     dispDrv.draw_buf = &_dispBuf;
     lv_disp_drv_register(&dispDrv);
 
-    static lv_indev_drv_t indevDrv;
-    lv_indev_drv_init(&indevDrv);
-    indevDrv.type    = LV_INDEV_TYPE_POINTER;
-    indevDrv.read_cb = _lvglTouchRead;
-    lv_indev_drv_register(&indevDrv);
+    if (_touchAvailable) {
+        static lv_indev_drv_t indevDrv;
+        lv_indev_drv_init(&indevDrv);
+        indevDrv.type    = LV_INDEV_TYPE_POINTER;
+        indevDrv.read_cb = _lvglTouchRead;
+        lv_indev_drv_register(&indevDrv);
+    }
 
     // Build the UI - base tabs plus the Learn tab and its modals
     _buildTabControl();

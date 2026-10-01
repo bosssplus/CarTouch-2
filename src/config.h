@@ -19,50 +19,24 @@
 // □□□□□□□□□□ Hardware pins
 // ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 
-// Hardware profile defaults.
-// Keep the build consistent across ESP32-S3 and ESP32-C6 while allowing
-// runtime reassignment through persisted configuration. The defaults remain
-// a safe starting point; runtime validation must still reject conflicts.
-#if defined(CONFIG_IDF_TARGET_ESP32C6)
-    // ESP32-C6 default pin set: use quiet GPIOs that are not dedicated flash
-    // or strapping pins and leave the USB/UART pins available for debugging.
-    #define PIN_CAN_TX 20
-    #define PIN_CAN_RX 21
-    #define PIN_CAN1_CS  8
-    #define PIN_CAN1_INT 9
-    #define CAN1_SPEED 500000
-    #define CAN1_LISTEN_ONLY true
-    #define MCP2515_SPI_CLOCK 10000000
+// ESP32-S3 default pin set for the original CarTouch board.
+#define PIN_CAN_TX 9
+#define PIN_CAN_RX 6
+#define PIN_CAN1_CS  15
+#define PIN_CAN1_INT 16
+#define CAN1_SPEED 500000
+#define CAN1_LISTEN_ONLY true
+#define MCP2515_SPI_CLOCK 10000000
 
-    #define PIN_TFT_CS   6
-    #define PIN_TFT_DC   7
-    #define PIN_TFT_RST  5
-    #define PIN_TFT_MOSI 3
-    #define PIN_TFT_SCLK 4
-    #define PIN_TFT_MISO 2
-    #define PIN_TFT_BL   11
-    #define PIN_TOUCH_CS 12
-    #define PIN_LED_INTERNAL 13
-#else
-    // ESP32-S3 default pin set for the original CarTouch board.
-    #define PIN_CAN_TX 9
-    #define PIN_CAN_RX 6
-    #define PIN_CAN1_CS  15
-    #define PIN_CAN1_INT 16
-    #define CAN1_SPEED 500000
-    #define CAN1_LISTEN_ONLY true
-    #define MCP2515_SPI_CLOCK 10000000
-
-    #define PIN_TFT_CS   10
-    #define PIN_TFT_DC   7
-    #define PIN_TFT_RST  4
-    #define PIN_TFT_MOSI 11
-    #define PIN_TFT_SCLK 12
-    #define PIN_TFT_MISO 13
-    #define PIN_TFT_BL   21
-    #define PIN_TOUCH_CS 14
-    #define PIN_LED_INTERNAL 38
-#endif
+#define PIN_TFT_CS   10
+#define PIN_TFT_DC   7
+#define PIN_TFT_RST  4
+#define PIN_TFT_MOSI 11
+#define PIN_TFT_SCLK 12
+#define PIN_TFT_MISO 13
+#define PIN_TFT_BL   21
+#define PIN_TOUCH_CS 14
+#define PIN_LED_INTERNAL 38
 
 // ○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○
 // ○○○○○○○○○○ CAN Bus settings
